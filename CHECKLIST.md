@@ -14,23 +14,23 @@
 
 ## 준비: 프로젝트 뼈대
 
-- [ ] `HYU_Challange` probe 프로젝트에서 빌드 설정 복사 (Gradle 9.6, compileSdk 37, minSdk 28, Pleos Nexus 저장소, Vehicle 2.3.2)
-- [ ] `namespace` / `applicationId` = `com.dontstudyy.carbeat`, `rootProject.name` 변경
-- [ ] 매니페스트 권한 선언 가져오기 (`CAR_DRIVE`, `CAR_LIGHTS`, `CAR_WINDOWS`, `CAR_ENERGY`, `android.car.permission.CAR_POWERTRAIN`)
-- [ ] 제어용 권한(`CONTROL_CAR_…`) 이름은 SDK에서 확인 (추측 금지)
-- [ ] `.private/카비트_개발자료/songs`의 곡 3개(ogg·json)를 `app/src/main/assets/songs/`로 복사 (`.private`는 공개되지 않으므로 빌드에 필요한 파일은 앱 폴더로)
-- [ ] 빈 앱이 에뮬레이터에서 빌드·실행됨
+- [x] `HYU_Challange` probe 프로젝트에서 빌드 설정 복사 (Gradle 9.6, compileSdk 37, minSdk 28, Pleos Nexus 저장소, Vehicle 2.3.2)
+- [x] `namespace` / `applicationId` = `com.dontstudyy.carbeat`, `rootProject.name` 변경
+- [x] 매니페스트 권한 선언 가져오기 (`CAR_DRIVE`, `CAR_LIGHTS`, `CAR_WINDOWS`, `CAR_ENERGY`, `android.car.permission.CAR_POWERTRAIN`) — CONTROL_CAR_LIGHTS·CONTROL_CAR_WINDOWS는 probe 매니페스트에서 확인한 이름
+- [~] 제어용 권한 이름은 probe 매니페스트(CONTROL_CAR_LIGHTS, CONTROL_CAR_WINDOWS)에서 가져옴. SDK 쪽 재확인은 단계 4 전
+- [x] `.private/카비트_개발자료/songs`의 곡 3개(ogg·json)를 `app/src/main/assets/songs/`로 복사 (`.private`는 공개되지 않으므로 빌드에 필요한 파일은 앱 폴더로)
+- [~] 빈 앱 CLI 빌드(assembleDebug)·단위 테스트 통과. 에뮬레이터 실행은 사용자 확인 필요
 
 ## 단계 0. 확인 실험
 
 통과 기준: 측정값을 README '검증 기록'에 기록. 핸들 흔들림이 ±180ms 안.
 
-- [ ] 핸들 임계값 통과 시각의 흔들림 20회 측정
-- [ ] AAOS `PARKING_BRAKE_ON`(0x11200402) 읽기 가능 여부
-- [ ] Virtual Console 와이퍼 주소·값 이름 찾기 (`GET /vehicle/catalog`)
-- [ ] 앰비언트 0.5초 간격 10회 쓰기
-- [ ] 화면 해상도·비율 확인
-- [ ] 키보드 연결 프로그램으로 브레이크 왕복 확인 (일부 값만 보내도 되는지 포함)
+- [x] 핸들 임계값 통과 시각의 흔들림 20회 측정: 중앙값에서 최대 133ms (통과 기준 ±180ms 안). 부호 반대(전송 +30 → 앱 -30) 확인
+- [~] AAOS `PARKING_BRAKE_ON`(0x11200402): 읽기·구독 가능, 그러나 에뮬레이터에서 항상 false(텔테일 시뮬레이터로도 안 바뀜) → 실행 조건에서 뺄지 사용자 결정 필요
+- [x] Virtual Console 와이퍼 주소: `PUT /vehicle/body?front_wiper=Off|Auto|Low|High`
+- [x] 앰비언트 0.5초 간격 10회 쓰기: 10/10 성공, 임의 ARGB 적용, 원복 확인
+- [x] 화면 해상도·비율 확인: 앱 창 1682x1210dp (가로 약 1.39:1)
+- [~] 브레이크 왕복·일부 값만 PUT 확인(exp_input.py). `tools/key_bridge.py` 본체는 단계 3
 
 ## 단계 1. 뼈대
 

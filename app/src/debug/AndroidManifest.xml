@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- 단계 0 실험용 (debug 빌드 전용). adb로 broadcast를 보내 실행한다. -->
+        <receiver android:name=".debug.ExperimentReceiver" android:exported="true" />
+    </application>
+</manifest>
