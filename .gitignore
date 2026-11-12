@@ -1,0 +1,28 @@
+# Private (공개 저장소에 올리지 않는 개발 자료)
+.private/
+
+# Gradle / Android
+.gradle/
+build/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# 서명 키 / 비밀 값
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+.env
+*.pem
+
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
