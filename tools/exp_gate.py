@@ -5,6 +5,8 @@
 사용: python tools/exp_gate.py [횟수]
 시계 오차(약 ±60ms)가 포함된다. 기준은 1초.
 """
+import shutil
+import os
 import re
 import statistics
 import subprocess
@@ -12,7 +14,10 @@ import sys
 import time
 import urllib.request
 
-ADB = r"C:\pleosEnv\Android\Sdk\platform-tools\adb.exe"
+# adb 위치: PATH에 있으면 그것, 없으면 ANDROID_HOME(없으면 기본 C:\pleosEnv)의 platform-tools
+ADB = shutil.which("adb") or os.path.join(
+    os.environ.get("ANDROID_HOME", r"C:\pleosEnv\Android\Sdk"), "platform-tools", "adb.exe"
+)
 BASE = "http://127.0.0.1:8088"
 
 

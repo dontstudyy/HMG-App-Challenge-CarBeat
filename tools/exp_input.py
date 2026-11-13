@@ -8,6 +8,8 @@ logcat(CARBEAT)에 남긴 도착 시각과 비교해 지연·흔들림을 잰다
 사용: python tools/exp_input.py steer|brake|wiper [횟수]
 지연의 절대값은 PC·에뮬레이터 시계 차이(±adb 왕복시간)를 포함한다. 흔들림(범위·표준편차)은 차이와 무관하다.
 """
+import shutil
+import os
 import random
 import re
 import statistics
@@ -16,7 +18,10 @@ import sys
 import time
 import urllib.request
 
-ADB = r"C:\pleosEnv\Android\Sdk\platform-tools\adb.exe"
+# adb 위치: PATH에 있으면 그것, 없으면 ANDROID_HOME(없으면 기본 C:\pleosEnv)의 platform-tools
+ADB = shutil.which("adb") or os.path.join(
+    os.environ.get("ANDROID_HOME", r"C:\pleosEnv\Android\Sdk"), "platform-tools", "adb.exe"
+)
 BASE = "http://127.0.0.1:8088"
 
 

@@ -7,6 +7,8 @@
 사전 조건: adb forward tcp:8088 tcp:8088, Virtual Console 페이지 열림, 앱(debug)이 해당 화면에 있을 것.
 에뮬레이터와 PC의 시계 차이(약 ±60ms)는 박자 보정이 흡수한다(보정 → 곡을 같은 방식으로 실행할 것).
 """
+import shutil
+import os
 import argparse
 import json
 import re
@@ -18,7 +20,10 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-ADB = r"C:\pleosEnv\Android\Sdk\platform-tools\adb.exe"
+# adb 위치: PATH에 있으면 그것, 없으면 ANDROID_HOME(없으면 기본 C:\pleosEnv)의 platform-tools
+ADB = shutil.which("adb") or os.path.join(
+    os.environ.get("ANDROID_HOME", r"C:\pleosEnv\Android\Sdk"), "platform-tools", "adb.exe"
+)
 BASE = "http://127.0.0.1:8088"
 SONGS = Path(__file__).resolve().parent.parent / "app/src/main/assets/songs"
 
