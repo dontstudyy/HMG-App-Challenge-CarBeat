@@ -3,19 +3,21 @@ package com.dontstudyy.carbeat
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import com.dontstudyy.carbeat.ui.CarBeatApp
+import com.dontstudyy.carbeat.vehicle.VehicleLink
 
 class MainActivity : ComponentActivity() {
+    private lateinit var link: VehicleLink
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("CarBeat")
-            }
-        }
+        link = VehicleLink(applicationContext)
+        link.start()
+        setContent { CarBeatApp(link) }
+    }
+
+    override fun onDestroy() {
+        link.stop()
+        super.onDestroy()
     }
 }
