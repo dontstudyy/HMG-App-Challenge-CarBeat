@@ -1,19 +1,32 @@
 {
   "packageName": "com.dontstudyy.carbeat",
   "appDescription": "CarBeat is a rhythm game played with the car's brake pedal, steering wheel and wipers while the car is parked.",
-  "version": "1.0",
+  "invokeWord": "",
+  "version": "1.0.0",
   "actionCalls": [
     {
-      "component": "activity",
-      "name": "START_CARBEAT",
-      "description": "Start the CarBeat rhythm game (only works while the car is parked)",
-      "parameters": []
+      "type": "function",
+      "function": {
+        "name": "START_CARBEAT",
+        "description": "Start the CarBeat rhythm game (only works while the car is parked)",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      }
     },
     {
-      "component": "activity",
-      "name": "PAUSE_GAME",
-      "description": "Pause the CarBeat game that is currently playing",
-      "parameters": []
+      "type": "function",
+      "function": {
+        "name": "PAUSE_GAME",
+        "description": "Pause the CarBeat game that is currently playing",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        }
+      }
     }
   ]
 }

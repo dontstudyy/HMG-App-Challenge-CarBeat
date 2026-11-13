@@ -2,9 +2,56 @@
 
 차를 세워 둔 시간에 브레이크 페달, 핸들, 와이퍼 스위치로 박자를 맞추고, 맞힐 때마다 앰비언트 라이트·와이퍼·실내등이 반응하는 차량 조작계 리듬게임입니다.
 
-- 현대 Pleos Connect 앱 공모전 출품작
-- 대상 환경: Android(Kotlin) / Pleos Connect SDK
-- 상태: 개발 중
+- 현대자동차그룹 차량용 앱 개발 공모전 출품작 (Pleos Connect, Android/Kotlin)
+- 상태: 기능 구현 완료(검증 기록 참고), 제출 준비 중
+
+## 앱 흐름
+
+홈(곡 3개 선택, 충전 남은 시간 추천, 설정, 튜토리얼 미션) → 실행 조건 확인(기어 P, 정차) → 박자 보정(메트로놈에 맞춰 브레이크 5회, 핸들 5회) → 플레이(레인 4개: 핸들 왼쪽 / 브레이크 / 핸들 오른쪽 / 와이퍼) → 결과.
+기어가 P를 벗어나면 어느 화면에서든 즉시 숨겨지고 차량 반응은 원래 값으로 돌아갑니다. 곡은 모두 직접 합성한 자작곡입니다.
+
+## 실행 방법
+
+### 테스트 환경
+- Pleos Connect 에뮬레이터 (AVD `Pleos_Connect_v2.1.0`, Android 14 기반, 2560×1440)
+- Android Studio의 JDK(jbr), Gradle 9.6, compileSdk 37 / minSdk 28. Pleos 라이브러리를 `nexus-playground.pleos.ai`에서 받으므로 **빌드에 인터넷이 필요**합니다.
+- 필요한 권한(매니페스트에 선언): 차량 조회 `CAR_DRIVE` `CAR_LIGHTS` `CAR_WINDOWS` `CAR_ENERGY`, 차량 제어 `CONTROL_CAR_LIGHTS` `CONTROL_CAR_WINDOWS`, AAOS `CAR_POWERTRAIN`(기어)
+
+### 빌드와 설치
+1. 저장소 루트에 `local.properties`를 만든다(커밋되지 않음): `sdk.dir=<Android SDK 경로>` (Windows는 `\\` 이스케이프 주의)
+2. `./gradlew assembleDebug` (또는 `assembleRelease`)
+3. 에뮬레이터에 설치: `adb install -r app/build/outputs/apk/debug/app-debug.apk`
+4. **release 서명(선택)**: 저장소 루트에 `keystore.properties`(커밋 금지)를 두면 그 키로 서명합니다. 형식은 `storeFile=` `storePassword=` `keyAlias=` `keyPassword=`. 없으면 서명되지 않은 release APK가 만들어집니다. 키스토어는 저장소 밖에 보관합니다(`keytool -genkeypair -keystore <경로> -alias carbeat -keyalg RSA -keysize 2048 -validity 10000`).
+5. 제출용 APK: `apk/정통윤_CarBeat_release.apk` (release, 서명됨)
+
+### 차량 입력 연결 (방향키 → 차량 신호)
+앱은 차량 신호(브레이크 페달, 핸들 각도, 와이퍼 스위치)를 입력으로 씁니다. 에뮬레이터에서는 Virtual Console로 이 신호를 만듭니다.
+1. `adb forward tcp:8088 tcp:8088`
+2. 브라우저에서 `http://127.0.0.1:8088/`(Virtual Console)을 **별도 창으로 열어 두고 가려지지 않게** 합니다. 닫히거나 백그라운드로 밀리면 제어가 503으로 막힙니다.
+3. `python tools/key_bridge.py` 실행 후 방향키: ↓ 브레이크, ← 핸들 왼쪽, → 핸들 오른쪽, ↑ 와이퍼 (Windows 전용, 종료는 Ctrl+C)
+4. 처음에는 앱의 **박자 보정**을 한 번 합니다(메트로놈 소리에 맞춰 브레이크 5번, 핸들 5번).
+
+### 시연·확인에 쓰는 도구(`tools/`)
+| 파일 | 용도 |
+|---|---|
+| `key_bridge.py` | 방향키 → Virtual Console REST (위 설명) |
+| `auto_player.py` | 곡 노트·보정 박에 맞춰 자동으로 입력을 보냄(빠른 곡 시연·녹화, 입력 경로 검증) |
+| `watch_vehicle.py` | 앰비언트·와이퍼·실내등 값이 바뀔 때마다 기록(차량 반응 확인) |
+| `exp_input.py`, `exp_gate.py` | 입력 지연·주차 게이트 전환 시간 측정(단계 0·1) |
+
+debug 빌드에는 확인용 기능이 더 있습니다(release에는 없음): 에뮬레이터 창에서 방향키 직접 입력, 플레이 화면의 "오토" 버튼, `adb shell am start -n com.dontstudyy.carbeat/.MainActivity --es song slow --ez auto true --ez wiper true`(곡 선택·자동 플레이·와이퍼 반응).
+
+### 시연 순서 예
+1. 홈에서 설정의 "와이퍼 반응"을 켠다(기본은 꺼짐). 충전 추천 확인: Virtual Console에서 SOC와 충전 스위치를 바꾸면 홈의 문구가 바뀐다.
+2. 튜토리얼 미션: 와이퍼를 High(2단)로 올리면 완료.
+3. 박자 보정 → 곡 플레이 → 콤보 10·20에서 와이퍼, 맞힐 때마다 앰비언트, 완주 시 실내등 3번 → 결과.
+4. 플레이 중 기어를 D로 바꾸면 즉시 정지·숨김, 차량 값이 원래대로 돌아온다(`PUT /vehicle/gear?gear=Drive`).
+5. Gleo: `adb shell am start -a START_CARBEAT`(시작), `adb shell am start -a PAUSE_GAME`(일시정지).
+
+## 저장소 구성
+- `app/` 앱 소스 (`vehicle` 차량 연결, `gate` 주차 게이트, `input` 입력 변환·박자 보정, `audio` 곡 재생·메트로놈, `game` 판정·곡 시계, `reaction` 차량 반응, `ui` 화면)
+- `app/src/main/assets/songs/` 곡 3개(ogg, 노트 JSON), `assets/schema.json` Gleo 스키마
+- `tools/` PC용 스크립트, `apk/` 제출용 APK
 
 ## 검증 기록
 
@@ -119,5 +166,6 @@ debug 빌드의 "오토" 버튼(모든 노트를 정확한 시각에 자동 입�
 | 튜토리얼 미션 | "와이퍼를 2단으로 올려 보세요". 앞 와이퍼 스위치를 0.5초마다 읽어 `CONTINUOUS_LEVEL_3`(Virtual Console `High`)이 되면 완료(`현재 와이퍼: 2단(고속)`, `미션 완료!`). 완료 표시는 기기에 저장되어 홈 버튼에 ✔ 표시. 입력 리스너(`WiperState`)는 켜짐/꺼짐만 줘서 단계는 스위치를 직접 읽는다 |
 | Gleo | `assets/schema.json`(함수 2개)과 `AndroidManifest.xml` intent-filter. `adb shell am start -a START_CARBEAT`: 홈에서 시작 흐름(실행 조건)으로 이동. `adb shell am start -a PAUSE_GAME`: 플레이 중이면 일시정지(곡·입력·판정 정지, 차량 반응을 원래 값으로 복구, 오버레이의 계속/종료). 재개하면 차량 반응이 다시 시작됨 |
 
+- **스키마 형식 주의(실측):** 개발환경 문서에는 `actionCalls`의 함수를 `component/name/description/parameters(배열)`로 적었지만, 에뮬레이터의 Gleo(AMI) 파서는 이 형식을 거부했다(`Fields [type, function] are required ... at $[0].actionCalls[0]`, 인식된 함수 수 0). 시스템에 설치된 다른 앱의 스키마(logcat `[GAA] Loaded schema.json`)와 같은 **OpenAI 함수 호출 형식**(`{"type":"function","function":{"name","description","parameters":{"type":"object","properties":{}}}}`)으로 고쳤다. 고친 스키마가 함수 2개로 인식되는지는 에뮬레이터가 크래시 루프에 빠져 **아직 확인하지 못했다**(logcat `ami-sdk ... functionCount`로 확인).
 - Gleo 쪽으로 돌려주는 Callback(응답)은 구현하지 않았다(설계서 범위 밖). 시연은 adb로 같은 intent를 보낸다.
 - 주행 중(게이트 닫힘)에는 `START_CARBEAT`가 무시된다.

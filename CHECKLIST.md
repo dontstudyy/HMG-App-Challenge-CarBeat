@@ -94,9 +94,9 @@
 
 통과 기준: 초기화한 에뮬레이터에 APK를 설치해 처음부터 끝까지 동작.
 
-- [ ] release 서명 설정 (키스토어는 저장소 밖에 보관)
-- [ ] release APK 빌드, 에뮬레이터 설치·실행 확인 (최적화로 SDK 클래스가 제거되지 않았는지)
-- [ ] `.gitignore`에 `!apk/*.apk` 예외 추가, `apk/정통윤_CarBeat_release.apk` 배치
-- [ ] README: 앱 이름·한 줄 소개, 실행 방법, 테스트 환경·필요 설정, APK 위치, 검증 기록
+- [x] release 서명 설정 (키스토어는 저장소 밖 `C:pleosEnvrbeat-keys`, 설정은 gitignore된 `keystore.properties`)
+- [~] release APK 빌드·서명 검증 완료(R8 켬, Pleos SDK는 R8 범위 밖). 에뮬레이터 설치·실행 확인은 에뮬레이터 크래시 루프로 미완 — 새로 설치한 상태에서 보정→플레이 재확인 필요
+- [x] `.gitignore`에 `!apk/*.apk` 예외 추가, `apk/정통윤_CarBeat_release.apk` 배치
+- [x] README: 앱 이름·한 줄 소개, 실행 방법, 테스트 환경·필요 설정, APK 위치, 검증 기록
 - [ ] 시연 영상 녹화 (앱 + Virtual Console 동시)
 - [ ] 클린 빌드 최종 검증 (인터넷 연결 상태)

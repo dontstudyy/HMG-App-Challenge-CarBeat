@@ -26,3 +26,6 @@ google-services.json
 *.iml
 .DS_Store
 Thumbs.db
+
+# 제출용 APK는 저장소에 포함한다
+!apk/*.apk
