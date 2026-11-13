@@ -48,6 +48,8 @@ dependencies {
     // Pleos SDK (probe에서 검증된 버전)
     implementation("ai.pleos.playground:Vehicle:2.3.2")
     testImplementation(libs.junit)
+    // JVM 단위 테스트에서는 android.jar의 org.json이 비어 있어 실제 구현을 쓴다
+    testImplementation("org.json:json:20240303")
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
