@@ -1,9 +1,11 @@
 package com.dontstudyy.carbeat.ui
 
-import androidx.compose.foundation.background
+import android.os.SystemClock
+import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -27,11 +29,17 @@ fun CarBeatApp(link: VehicleLink) {
 
     // 게이트가 닫히면 진행 중이던 화면은 버리고, 다시 열리면 홈에서 시작한다(주행 중 재개 금지).
     LaunchedEffect(gate.open) {
+        Log.i("CARBEAT", "GATE_UI open=${gate.open} n=${SystemClock.elapsedRealtimeNanos() / 1_000_000}")
         if (!gate.open) screen = Screen.HOME
     }
 
     CarBeatTheme {
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Surface(
+            Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+        ) {
+            Box(Modifier.fillMaxSize()) {
             if (!gate.open) {
                 HiddenScreen(gate)
             } else {
@@ -56,6 +64,7 @@ fun CarBeatApp(link: VehicleLink) {
                     Screen.RESULT -> ResultScreen(onHome = { screen = Screen.HOME })
                     Screen.TUTORIAL -> TutorialScreen(onBack = { screen = Screen.HOME })
                 }
+            }
             }
         }
     }
