@@ -14,6 +14,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.dontstudyy.carbeat.game.GameResult
+import com.dontstudyy.carbeat.game.SongRepository
 import com.dontstudyy.carbeat.gate.GateState
 import com.dontstudyy.carbeat.gate.ParkingGate
 import com.dontstudyy.carbeat.vehicle.VehicleLink
@@ -23,9 +26,13 @@ enum class Screen { HOME, CONDITIONS, CALIBRATION, PLAY, RESULT, TUTORIAL }
 
 @Composable
 fun CarBeatApp(link: VehicleLink) {
+    val ctx = LocalContext.current
     val snapshot by link.snapshot.collectAsState()
     val gate: GateState = ParkingGate.evaluate(snapshot)
+    val songs = remember { SongRepository.loadAll(ctx) }
+    var selectedId by remember { mutableStateOf("brake") }
     var screen by remember { mutableStateOf(Screen.HOME) }
+    var result by remember { mutableStateOf<GameResult?>(null) }
 
     // 게이트가 닫히면 진행 중이던 화면은 버리고, 다시 열리면 홈에서 시작한다(주행 중 재개 금지).
     LaunchedEffect(gate.open) {
@@ -40,31 +47,35 @@ fun CarBeatApp(link: VehicleLink) {
             contentColor = MaterialTheme.colorScheme.onBackground,
         ) {
             Box(Modifier.fillMaxSize()) {
-            if (!gate.open) {
-                HiddenScreen(gate)
-            } else {
-                when (screen) {
-                    Screen.HOME -> HomeScreen(
-                        onStart = { screen = Screen.CONDITIONS },
-                        onTutorial = { screen = Screen.TUTORIAL },
-                    )
-                    Screen.CONDITIONS -> ConditionsScreen(
-                        gate = gate,
-                        onNext = { screen = Screen.CALIBRATION },
-                        onBack = { screen = Screen.HOME },
-                    )
-                    Screen.CALIBRATION -> CalibrationScreen(
-                        onNext = { screen = Screen.PLAY },
-                        onBack = { screen = Screen.HOME },
-                    )
-                    Screen.PLAY -> PlayScreen(
-                        onFinish = { screen = Screen.RESULT },
-                        onBack = { screen = Screen.HOME },
-                    )
-                    Screen.RESULT -> ResultScreen(onHome = { screen = Screen.HOME })
-                    Screen.TUTORIAL -> TutorialScreen(onBack = { screen = Screen.HOME })
+                if (!gate.open) {
+                    HiddenScreen(gate)
+                } else {
+                    when (screen) {
+                        Screen.HOME -> HomeScreen(
+                            songs = songs,
+                            selectedId = selectedId,
+                            onSelect = { selectedId = it },
+                            onStart = { screen = Screen.CONDITIONS },
+                            onTutorial = { screen = Screen.TUTORIAL },
+                        )
+                        Screen.CONDITIONS -> ConditionsScreen(
+                            gate = gate,
+                            onNext = { screen = Screen.CALIBRATION },
+                            onBack = { screen = Screen.HOME },
+                        )
+                        Screen.CALIBRATION -> CalibrationScreen(
+                            onNext = { screen = Screen.PLAY },
+                            onBack = { screen = Screen.HOME },
+                        )
+                        Screen.PLAY -> PlayScreen(
+                            song = songs.first { it.id == selectedId },
+                            onFinish = { result = it; screen = Screen.RESULT },
+                            onBack = { screen = Screen.HOME },
+                        )
+                        Screen.RESULT -> ResultScreen(result = result, onHome = { screen = Screen.HOME })
+                        Screen.TUTORIAL -> TutorialScreen(onBack = { screen = Screen.HOME })
+                    }
                 }
-            }
             }
         }
     }

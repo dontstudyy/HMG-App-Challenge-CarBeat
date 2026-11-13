@@ -2,6 +2,23 @@ package com.dontstudyy.carbeat.game
 
 enum class Judgment { PERFECT, GOOD, MISS }
 
+/** 화면 표시용 노트 상태 */
+enum class NoteStatus { PENDING, HOLDING, HIT, MISSED }
+
+/** 곡이 끝난 뒤 결과 화면에 넘기는 값 */
+data class GameResult(
+    val title: String,
+    val score: Int,
+    val maxCombo: Int,
+    val perfect: Int,
+    val good: Int,
+    val miss: Int,
+    val holdSuccess: Int,
+    val total: Int,
+) {
+    val hitRate: Double get() = if (total == 0) 0.0 else (perfect + good).toDouble() / total
+}
+
 /** 판정 폭(초). 핸들은 신호 갱신이 느려 넓게 잡는다(설계서 6장). */
 data class JudgeWindows(val perfectSec: Double, val goodSec: Double) {
     companion object {
@@ -45,10 +62,25 @@ class GameEngine(
 
     private class NoteState(val note: Note) {
         var judged = false
+        var missed = false
         var holding = false
     }
 
     private val states = song.notes.map { NoteState(it) }
+    /** 시각순 노트 목록. [status]의 인덱스와 같다. */
+    val notes: List<Note> get() = song.notes
+
+    fun status(index: Int): NoteStatus {
+        val s = states[index]
+        return when {
+            !s.judged -> NoteStatus.PENDING
+            s.missed -> NoteStatus.MISSED
+            s.holding -> NoteStatus.HOLDING
+            else -> NoteStatus.HIT
+        }
+    }
+
+    fun result() = GameResult(song.title, score, maxCombo, perfectCount, goodCount, missCount, holdSuccessCount, totalNotes)
     private val byLane: Map<Lane, List<NoteState>> = Lane.entries.associateWith { l -> states.filter { it.note.lane == l } }
     private val pressed = BooleanArray(Lane.entries.size)
 
@@ -105,6 +137,7 @@ class GameEngine(
             for (s in byLane.getValue(lane)) {
                 if (!s.judged && eff > s.note.t + good) {
                     s.judged = true
+                    s.missed = true
                     missCount++
                     combo = 0
                     onEvent(GameEvent(GameEvent.Type.JUDGED, s.note, Judgment.MISS, null, combo))

@@ -31,6 +31,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     // AAOS Car API (CarPropertyManager 등) 컴파일용
     useLibrary("android.car")
@@ -47,6 +48,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     // Pleos SDK (probe에서 검증된 버전)
     implementation("ai.pleos.playground:Vehicle:2.3.2")
+    // 곡 재생 (판정 기준 시각 = 재생 위치)
+    implementation("androidx.media3:media3-exoplayer:1.8.0")
     testImplementation(libs.junit)
     // JVM 단위 테스트에서는 android.jar의 org.json이 비어 있어 실제 구현을 쓴다
     testImplementation("org.json:json:20240303")
