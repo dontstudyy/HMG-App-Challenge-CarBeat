@@ -27,8 +27,16 @@ class VehicleLink(private val ctx: Context) {
         private const val PROP_GEAR_SELECTION = 0x11400400
     }
 
+    /** 화면이 그리는 차량 값(브레이크·핸들·와이퍼·앰비언트·실내등) */
+    val signals = VehicleSignals()
+
     /** 차량 입력(브레이크·핸들·와이퍼) 허브. start() 뒤에 Vehicle SDK에 연결된다. */
-    val input = com.dontstudyy.carbeat.input.InputHub()
+    val input = com.dontstudyy.carbeat.input.InputHub(signals)
+
+    /** 차량 반응(앰비언트·와이퍼·실내등) 쓰기 층과 곡 단위 진행 */
+    val settings = com.dontstudyy.carbeat.reaction.ReactionSettings(ctx)
+    private val reactor = com.dontstudyy.carbeat.reaction.VehicleReactor(signals) { input.wiper.markAppAction(it) }
+    val reaction = com.dontstudyy.carbeat.reaction.ReactionController(reactor, settings)
 
     private val _snapshot = MutableStateFlow(VehicleSnapshot())
     val snapshot: StateFlow<VehicleSnapshot> = _snapshot.asStateFlow()
@@ -61,7 +69,7 @@ class VehicleLink(private val ctx: Context) {
         if (started) return
         started = true
         try {
-            vehicle = Vehicle(ctx).also { it.initialize(); input.attach(it) }
+            vehicle = Vehicle(ctx).also { it.initialize(); input.attach(it); reactor.attach(it) }
         } catch (t: Throwable) {
             Log.w(TAG, "Vehicle SDK init FAIL ${t.javaClass.simpleName}: ${t.message}")
         }
@@ -107,7 +115,9 @@ class VehicleLink(private val ctx: Context) {
         runCatching { propertyManager?.unregisterCallback(gearCallback) }
         runCatching { uxManager?.unregisterListener() }
         runCatching { car?.disconnect() }
+        reaction.abort() // 앱을 닫을 때 차량 값을 원래대로 되돌린다
         input.detach()
+        reactor.detach()
         runCatching { vehicle?.release() }
         propertyManager = null
         uxManager = null

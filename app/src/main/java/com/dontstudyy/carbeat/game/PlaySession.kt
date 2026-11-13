@@ -20,6 +20,7 @@ class PlaySession(
     ctx: Context,
     val song: Song,
     delaySec: (Lane) -> Double = { 0.0 },
+    private val reaction: com.dontstudyy.carbeat.reaction.ReactionController? = null,
 ) {
     companion object {
         const val PRE_ROLL_SEC = 2.0
@@ -57,6 +58,7 @@ class PlaySession(
     fun start() {
         startNanos = System.nanoTime()
         player.prepare()
+        reaction?.begin()
     }
 
     /** 현재 곡 시각(초). 시작 전 준비 구간은 음수. */
@@ -115,6 +117,7 @@ class PlaySession(
         if (!finished && (player.ended || t >= song.durationSec + END_GRACE_SEC)) {
             engine.finish()
             finished = true
+            reaction?.complete() // 실내등 연출 뒤 스스로 원상 복구
             val r = engine.result()
             android.util.Log.i("CARBEAT", "PLAY_RESULT song=${song.id} perfect=${r.perfect} good=${r.good} miss=${r.miss} score=${r.score} maxCombo=${r.maxCombo} hitRate=${"%.3f".format(r.hitRate)}")
         }
@@ -157,6 +160,11 @@ class PlaySession(
 
     private fun onEvent(e: GameEvent) {
         val now = System.nanoTime()
+        when (e.type) {
+            GameEvent.Type.JUDGED -> e.judgment?.let { reaction?.onJudged(e.note.lane, it, e.comboAfter) }
+            GameEvent.Type.HOLD_BROKEN -> reaction?.onComboBroken()
+            GameEvent.Type.HOLD_SUCCESS -> {}
+        }
         if (e.type == GameEvent.Type.JUDGED) {
             // 진단: 노트별 판정 오차(ms, 음수=일찍). 보정 후의 값이다.
             android.util.Log.i("CARBEAT", "JUDGE lane=${e.note.lane} t=${"%.3f".format(e.note.t)} j=${e.judgment} off=${e.offsetSec?.let { "%.0f".format(it * 1000) }}")
@@ -188,5 +196,9 @@ class PlaySession(
 
     fun result(): GameResult = engine.result()
 
-    fun release() = player.release()
+    fun release() {
+        player.release()
+        // 완주하지 않고 나가면(중단·주행 전환·앱 종료) 차량 반응을 즉시 되돌린다. 완주했으면 연출이 끝난 뒤 스스로 되돌린다.
+        if (!finished) reaction?.abort()
+    }
 }

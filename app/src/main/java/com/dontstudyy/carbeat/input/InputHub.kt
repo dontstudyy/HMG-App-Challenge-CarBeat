@@ -12,7 +12,7 @@ import android.util.Log
  * 차량 신호(브레이크, 핸들, 와이퍼)를 구독해 [InputEvent]로 바꿔 [listener]에 전달한다.
  * 이벤트 시각은 리스너가 불린 순간의 elapsedRealtimeNanos. 콜백은 차량 SDK 스레드에서 온다.
  */
-class InputHub {
+class InputHub(private val signals: com.dontstudyy.carbeat.vehicle.VehicleSignals? = null) {
     companion object {
         private const val TAG = "CARBEAT"
     }
@@ -35,6 +35,7 @@ class InputHub {
     private val brakeListener = object : BrakePedalStatusListener {
         override fun onBrakePedalStatusUpdated(p0: Boolean?) {
             val t = SystemClock.elapsedRealtimeNanos()
+            signals?.update { it.copy(brakePressed = p0) }
             val e = synchronized(brake) { brake.onValue(p0, t) }
             if (e != null) emit(e)
         }
@@ -45,6 +46,7 @@ class InputHub {
     private val steerListener = object : SteeringWheelAngleListener {
         override fun onSteeringWheelAngleUpdated(p0: Float?) {
             val t = SystemClock.elapsedRealtimeNanos()
+            signals?.update { it.copy(steerDeg = p0) }
             val list = synchronized(steer) { steer.onAngle(p0, t) }
             list.forEach { emit(it) }
         }
@@ -56,6 +58,7 @@ class InputHub {
         override fun onWiperStateUpdated(p0: WiperState?) {
             if (p0 == null) return
             val t = SystemClock.elapsedRealtimeNanos()
+            signals?.update { it.copy(wiperOn = p0 != WiperState.OFF) }
             val e = synchronized(wiper) { wiper.onState(p0 != WiperState.OFF, t) }
             if (e != null) emit(e)
         }

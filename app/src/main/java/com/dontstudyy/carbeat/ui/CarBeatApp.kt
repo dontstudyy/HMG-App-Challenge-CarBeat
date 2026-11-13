@@ -39,7 +39,10 @@ fun CarBeatApp(link: VehicleLink, initialSongId: String? = null) {
     // 게이트가 닫히면 진행 중이던 화면은 버리고, 다시 열리면 홈에서 시작한다(주행 중 재개 금지).
     LaunchedEffect(gate.open) {
         Log.i("CARBEAT", "GATE_UI open=${gate.open} n=${SystemClock.elapsedRealtimeNanos() / 1_000_000}")
-        if (!gate.open) screen = Screen.HOME
+        if (!gate.open) {
+            screen = Screen.HOME
+            link.reaction.abort() // 주행 전환: 차량 반응을 즉시 되돌린다
+        }
     }
 
     CarBeatTheme {
@@ -57,6 +60,7 @@ fun CarBeatApp(link: VehicleLink, initialSongId: String? = null) {
                             songs = songs,
                             selectedId = selectedId,
                             onSelect = { selectedId = it },
+                            settings = link.settings,
                             onStart = { screen = Screen.CONDITIONS },
                             onTutorial = { screen = Screen.TUTORIAL },
                         )
@@ -75,6 +79,9 @@ fun CarBeatApp(link: VehicleLink, initialSongId: String? = null) {
                             song = songs.first { it.id == selectedId },
                             hub = link.input,
                             store = store,
+                            reaction = link.reaction,
+                            signals = link.signals,
+                            gear = snapshot.gear,
                             onFinish = { result = it; screen = Screen.RESULT },
                             onBack = { screen = Screen.HOME },
                         )

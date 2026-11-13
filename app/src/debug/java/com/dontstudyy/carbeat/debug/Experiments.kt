@@ -51,6 +51,7 @@ class Experiments private constructor(private val ctx: Context) {
                 "parking" -> parking()
                 "ambient" -> ambient()
                 "state" -> state()
+                "ambsw" -> ambsw(arg)
                 else -> log("RUN", "unknown id=$id")
             }
         } catch (t: Throwable) {
@@ -158,5 +159,17 @@ class Experiments private constructor(private val ctx: Context) {
             }
         }, fail("state", "wiperCapability"))
         vehicle.getLight().getCurrentCabinLightState({ s -> log("state", "cabin=$s") }, fail("state", "cabin"))
+    }
+
+    // ---- 앰비언트 스위치 쓰기가 Virtual Console에 어떻게 반영되는지: arg = ON / OFF / AUTOMATIC / DAYTIME_RUNNING ----
+    private fun ambsw(arg: String) {
+        val l = vehicle.getLight()
+        l.checkAmbientLightSwitchCapabilities({ _, map ->
+            log("ambsw", "capability ${map.entries.map { it.key.values.toList() to it.value }}")
+            val a = map.keys.firstOrNull() ?: return@checkAmbientLightSwitchCapabilities
+            l.getAmbientLightSwitch(a, { cur -> log("ambsw", "read switch=$cur") }, fail("ambsw", "read"))
+            val v = runCatching { ai.pleos.playground.vehicle.constant.control.LightSwitch.valueOf(arg) }.getOrNull() ?: return@checkAmbientLightSwitchCapabilities
+            l.setAmbientLightSwitch(a, v, { _, r -> log("ambsw", "wrote=$v cb=$r") }, fail("ambsw", "write $v"))
+        }, fail("ambsw", "capability"))
     }
 }

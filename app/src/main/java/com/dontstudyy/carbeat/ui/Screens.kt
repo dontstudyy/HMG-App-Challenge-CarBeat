@@ -13,6 +13,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.dontstudyy.carbeat.reaction.ReactionSettings
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -40,9 +46,12 @@ fun HomeScreen(
     songs: List<Song>,
     selectedId: String,
     onSelect: (String) -> Unit,
+    settings: ReactionSettings,
     onStart: () -> Unit,
     onTutorial: () -> Unit,
 ) {
+    var vehicleReaction by remember { mutableStateOf(settings.vehicleReaction) }
+    var wiperReaction by remember { mutableStateOf(settings.wiperReaction) }
     ScreenFrame("카비트") {
         Text("충전 정보는 단계 5에서 연결됩니다.", fontSize = 20.sp)
         Text("곡 선택", fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
@@ -54,6 +63,19 @@ fun HomeScreen(
                 RadioButton(selected = song.id == selectedId, onClick = { onSelect(song.id) })
                 Text("${song.title}  ·  ${song.bpm.toInt()}BPM  ·  ${song.durationSec.toInt()}초  ·  노트 ${song.notes.size}", fontSize = 22.sp)
             }
+        }
+        Text("설정", fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Switch(checked = vehicleReaction, onCheckedChange = { vehicleReaction = it; settings.vehicleReaction = it })
+            Text("차량 반응 (앰비언트·실내등)", fontSize = 20.sp)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Switch(
+                checked = wiperReaction,
+                onCheckedChange = { wiperReaction = it; settings.wiperReaction = it },
+                enabled = vehicleReaction,
+            )
+            Text("와이퍼 반응 (기본 꺼짐, 콤보 10·20에서 곡당 최대 2회)", fontSize = 20.sp)
         }
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {

@@ -43,8 +43,11 @@ import com.dontstudyy.carbeat.game.GameResult
 import com.dontstudyy.carbeat.game.Lane
 import com.dontstudyy.carbeat.game.PlaySession
 import com.dontstudyy.carbeat.game.Song
+import com.dontstudyy.carbeat.gate.Gear
 import com.dontstudyy.carbeat.input.CalibrationStore
 import com.dontstudyy.carbeat.input.InputHub
+import com.dontstudyy.carbeat.reaction.ReactionController
+import com.dontstudyy.carbeat.vehicle.VehicleSignals
 import kotlinx.coroutines.delay
 
 /**
@@ -56,22 +59,26 @@ fun PlayScreen(
     song: Song,
     hub: InputHub,
     store: CalibrationStore,
+    reaction: ReactionController,
+    signals: VehicleSignals,
+    gear: Gear,
     onFinish: (GameResult) -> Unit,
     onBack: () -> Unit,
-    rightPanel: @Composable () -> Unit = { InteriorPlaceholder() },
+    rightPanel: @Composable () -> Unit = { InteriorPanel(signals) },
 ) {
     val ctx = LocalContext.current
-    val session = remember(song) { PlaySession(ctx, song, store::delayFor) }
+    val session = remember(song) { PlaySession(ctx, song, store::delayFor, reaction) }
     // frame, songTime은 그리기(Canvas)에서만 읽는다. 구성(composition)은 HUD 값이 바뀔 때만 다시 돈다.
     var frame by remember { mutableLongStateOf(0L) }
     var songTime by remember { mutableDoubleStateOf(-PlaySession.PRE_ROLL_SEC) }
     var hud by remember { mutableStateOf(HudState()) }
     var progress by remember { mutableFloatStateOf(0f) }
-    var auto by remember { mutableStateOf(false) }
+    var auto by remember { mutableStateOf(DebugFlags.autoplay) }
     val textMeasurer = rememberTextMeasurer(cacheSize = 64)
     val focus = remember { FocusRequester() }
 
     DisposableEffect(session) {
+        session.autoplay = auto
         session.start()
         // 차량 신호 입력: 스레드가 달라 메인 스레드로 넘겨서 처리한다
         val main = android.os.Handler(android.os.Looper.getMainLooper())
@@ -101,24 +108,28 @@ fun PlayScreen(
         onFinish(session.result())
     }
 
-    Row(
+    Column(
         Modifier
             .fillMaxSize()
             .focusRequester(focus)
             .focusable()
             .debugLaneKeys(onDown = { session.press(it) }, onUp = { session.release(it) }),
     ) {
-        Column(Modifier.weight(0.6f).fillMaxHeight()) {
-            Hud(session.song.title, hud, progress, auto, onToggleAuto = {
-                auto = !auto
-                session.autoplay = auto
-            }, onBack = onBack)
-            Canvas(Modifier.weight(1f).fillMaxWidth()) {
-                if (frame < 0L) return@Canvas // frame을 읽어 매 프레임 다시 그리게 한다
-                drawGame(session, songTime, System.nanoTime(), textMeasurer)
+        Row(Modifier.weight(1f).fillMaxWidth()) {
+            Column(Modifier.weight(0.6f).fillMaxHeight()) {
+                Hud(session.song.title, hud, progress, auto, onToggleAuto = {
+                    auto = !auto
+                    session.autoplay = auto
+                }, onBack = onBack)
+                Canvas(Modifier.weight(1f).fillMaxWidth()) {
+                    if (frame < 0L) return@Canvas // frame을 읽어 매 프레임 다시 그리게 한다
+                    drawGame(session, songTime, System.nanoTime(), textMeasurer)
+                }
             }
+            Box(Modifier.weight(0.4f).fillMaxHeight()) { rightPanel() }
         }
-        Box(Modifier.weight(0.4f).fillMaxHeight()) { rightPanel() }
+        // 아래 띠: 차량에서 읽은 값
+        SignalStrip(signals, gear)
     }
 }
 
