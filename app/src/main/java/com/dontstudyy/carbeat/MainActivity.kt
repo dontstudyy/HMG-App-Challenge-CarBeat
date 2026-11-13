@@ -22,6 +22,14 @@ class MainActivity : ComponentActivity() {
             intent?.takeIf { it.hasExtra("react") }?.let { link.settings.vehicleReaction = it.getBooleanExtra("react", true) }
         }
         setContent { CarBeatApp(link, initialSong) }
+        // Gleo 음성 명령(START_CARBEAT, PAUSE_GAME)으로 열렸으면 화면에 전달
+        com.dontstudyy.carbeat.ui.GleoCommands.post(intent?.action)
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        com.dontstudyy.carbeat.ui.GleoCommands.post(intent.action)
     }
 
     override fun onDestroy() {

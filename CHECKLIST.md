@@ -85,10 +85,10 @@
 
 통과 기준: SOC와 충전 스위치를 바꾸면 추천 문구가 바뀜. 미션 완료 표시.
 
-- [ ] 홈: 충전 남은 시간 → "M곡 정도" 추천 ('예상' 표기)
-- [ ] 튜토리얼 미션: 와이퍼 `CONTINUOUS_LEVEL_3` 감지 시 완료
-- [ ] Gleo: `assets/schema.json` + intent-filter (`START_CARBEAT`, `PAUSE_GAME`)
-- [ ] `adb shell am start -a START_CARBEAT` 동작 확인
+- [x] 홈: 충전 남은 시간 → "M곡 정도" 추천 (예상 표기). SOC·충전 스위치를 바꾸면 문구가 바뀜 확인 (단위 테스트 6개 + 에뮬레이터)
+- [x] 튜토리얼 미션: 와이퍼 `CONTINUOUS_LEVEL_3` 감지 시 완료·저장 (에뮬레이터 확인)
+- [x] Gleo: `assets/schema.json` + intent-filter (`START_CARBEAT`, `PAUSE_GAME`) + 일시정지/재개
+- [x] `adb shell am start -a START_CARBEAT` 동작 확인 (`PAUSE_GAME`도 확인)
 
 ## 단계 6. 제출 준비
 

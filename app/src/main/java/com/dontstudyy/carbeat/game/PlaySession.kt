@@ -63,6 +63,7 @@ class PlaySession(
 
     /** 현재 곡 시각(초). 시작 전 준비 구간은 음수. */
     fun songTimeSec(): Double {
+        if (paused) return pausedAtSec
         val clockT = (System.nanoTime() - startNanos) / 1e9 - PRE_ROLL_SEC
         if (!playRequested) {
             if (clockT >= 0.0) {
@@ -82,10 +83,36 @@ class PlaySession(
             // 재생 위치를 그대로 쓰지 않고, 최근 표본으로 맞춘 곡 시계 모델로 읽는다(불규칙한 위치 값을 평활)
             return clock.timeAt(SystemClock.elapsedRealtimeNanos()) ?: pos
         }
-        return 0.0
+        return lastKnownSec // 재생이 아직 시작되지 않은 순간(시작·재개 직후)에는 마지막 값을 유지
     }
 
     private var t0Logged = false
+    private var lastKnownSec = 0.0
+
+    /** 일시정지 중인가. 일시정지에서는 곡·입력·판정·차량 반응이 모두 멈춘다. */
+    var paused = false; private set
+    private var pausedAtSec = 0.0
+
+    /** 곡이 시작된 뒤에만 일시정지할 수 있다. 차량 반응은 원래 값으로 되돌린다. */
+    fun pause() {
+        if (!playRequested || finished || paused) return
+        pausedAtSec = lastKnownSec
+        paused = true
+        player.pause()
+        for (l in Lane.entries) pressed[l.ordinal] = false
+        reaction?.abort()
+        android.util.Log.i("CARBEAT", "PLAY_PAUSE at=${"%.2f".format(pausedAtSec)}")
+    }
+
+    /** 일시정지에서 재개한다. 곡 시계 모델을 새로 맞추고, 차량 반응을 다시 시작한다. */
+    fun resume() {
+        if (!paused) return
+        paused = false
+        clock.reset()
+        player.play()
+        reaction?.begin()
+        android.util.Log.i("CARBEAT", "PLAY_RESUME")
+    }
 
     /** 재생 위치 표본으로 맞춘 곡 시계 모델. 임의 시각(예: 입력 이벤트 발생 시각)의 곡 시각을 준다. */
     private val clock = SongClockModel()
@@ -95,8 +122,10 @@ class PlaySession(
 
     /** 프레임마다 호출. 곡 시각을 돌려준다. */
     fun tick(): Double {
+        if (paused) return pausedAtSec
         if (playRequested && player.isPlaying) clock.addSample(SystemClock.elapsedRealtimeNanos(), player.positionSec)
         val t = songTimeSec()
+        lastKnownSec = t
         // 진단: 1초마다 곡 시각과 프레임 수(초당 프레임)를 남긴다
         diagFrames++
         val now = System.nanoTime()
@@ -125,11 +154,13 @@ class PlaySession(
     }
 
     fun press(lane: Lane) {
+        if (paused) return
         pressed[lane.ordinal] = true
         engine.onPress(lane, songTimeSec())
     }
 
     fun release(lane: Lane) {
+        if (paused) return
         pressed[lane.ordinal] = false
         engine.onRelease(lane, songTimeSec())
     }
@@ -139,6 +170,7 @@ class PlaySession(
      * 메인 스레드에서 호출한다.
      */
     fun onVehicleInput(e: InputEvent) {
+        if (paused) return
         val ageSec = (SystemClock.elapsedRealtimeNanos() - e.timeNanos) / 1e9
         val now = songTimeSec()
         // 이벤트가 발생한 시각의 곡 시각을 곡 시계 모델로 바로 구한다(메인 스레드 처리 지연과 무관).

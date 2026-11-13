@@ -1,6 +1,8 @@
 package com.dontstudyy.carbeat.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -62,6 +64,8 @@ fun PlayScreen(
     reaction: ReactionController,
     signals: VehicleSignals,
     gear: Gear,
+    /** 값이 늘어날 때마다 일시정지한다(Gleo PAUSE_GAME) */
+    pauseSignal: Int = 0,
     onFinish: (GameResult) -> Unit,
     onBack: () -> Unit,
     rightPanel: @Composable () -> Unit = { InteriorPanel(signals) },
@@ -74,6 +78,7 @@ fun PlayScreen(
     var hud by remember { mutableStateOf(HudState()) }
     var progress by remember { mutableFloatStateOf(0f) }
     var auto by remember { mutableStateOf(DebugFlags.autoplay) }
+    var paused by remember { mutableStateOf(false) }
     val textMeasurer = rememberTextMeasurer(cacheSize = 64)
     val focus = remember { FocusRequester() }
 
@@ -89,10 +94,18 @@ fun PlayScreen(
         }
     }
 
+    LaunchedEffect(pauseSignal) {
+        if (pauseSignal > 0) {
+            session.pause()
+            paused = session.paused
+        }
+    }
+
     LaunchedEffect(session) {
         focus.requestFocus()
         while (!session.finished) {
             androidx.compose.runtime.withFrameNanos { n ->
+                if (session.paused) { frame = n; return@withFrameNanos }
                 val t = session.tick()
                 songTime = t
                 frame = n
@@ -108,6 +121,7 @@ fun PlayScreen(
         onFinish(session.result())
     }
 
+    Box(Modifier.fillMaxSize()) {
     Column(
         Modifier
             .fillMaxSize()
@@ -120,7 +134,7 @@ fun PlayScreen(
                 Hud(session.song.title, hud, progress, auto, onToggleAuto = {
                     auto = !auto
                     session.autoplay = auto
-                }, onBack = onBack)
+                }, onPause = { session.pause(); paused = session.paused }, onBack = onBack)
                 Canvas(Modifier.weight(1f).fillMaxWidth()) {
                     if (frame < 0L) return@Canvas // frame을 읽어 매 프레임 다시 그리게 한다
                     drawGame(session, songTime, System.nanoTime(), textMeasurer)
@@ -130,6 +144,19 @@ fun PlayScreen(
         }
         // 아래 띠: 차량에서 읽은 값
         SignalStrip(signals, gear)
+    }
+    if (paused) {
+        Box(Modifier.fillMaxSize().background(Color(0xCC000000)), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                Text("일시정지", fontSize = 44.sp, fontWeight = FontWeight.Bold)
+                Text("차량 반응은 원래 값으로 돌려 두었어요", fontSize = 20.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Button(onClick = { session.resume(); paused = session.paused }) { Text("계속", fontSize = 24.sp) }
+                    OutlinedButton(onClick = onBack) { Text("종료", fontSize = 24.sp) }
+                }
+            }
+        }
+    }
     }
 }
 
@@ -142,6 +169,7 @@ private fun Hud(
     progress: Float,
     auto: Boolean,
     onToggleAuto: () -> Unit,
+    onPause: () -> Unit,
     onBack: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -151,6 +179,7 @@ private fun Hud(
                 if (BuildConfig.DEBUG) {
                     if (auto) Button(onClick = onToggleAuto) { Text("오토 ON") } else OutlinedButton(onClick = onToggleAuto) { Text("오토") }
                 }
+                OutlinedButton(onClick = onPause) { Text("일시정지") }
                 OutlinedButton(onClick = onBack) { Text("중단") }
             }
         }

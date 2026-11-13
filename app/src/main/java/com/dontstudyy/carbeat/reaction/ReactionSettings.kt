@@ -17,4 +17,9 @@ class ReactionSettings(ctx: Context) {
     var wiperReaction: Boolean
         get() = prefs.getBoolean("wiper_reaction", false)
         set(v) { prefs.edit().putBoolean("wiper_reaction", v).apply() }
+
+    /** 튜토리얼 미션("와이퍼를 2단으로") 완료 여부 */
+    var tutorialDone: Boolean
+        get() = prefs.getBoolean("tutorial_done", false)
+        set(v) { prefs.edit().putBoolean("tutorial_done", v).apply() }
 }

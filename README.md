@@ -110,3 +110,14 @@ debug 빌드의 "오토" 버튼(모든 노트를 정확한 시각에 자동 입�
 - **앰비언트 스위치 API는 쓰지 않는다.** `setAmbientLightSwitch`는 쓰기 콜백이 성공하고 SDK가 읽는 값도 바뀌지만 Virtual Console의 앰비언트 모드(`On`)에는 반영되지 않는다. SDK가 읽는 앰비언트 상태도 Virtual Console과 달리 항상 OFF였다. 그래서 "앰비언트 끔"은 밝기 0으로 구현했고, 복구도 색·밝기만 한다.
 - 앱 프로세스가 강제 종료되면(`force-stop`, 크래시) 되돌릴 방법이 없다. 정상 종료·중단·주행 전환·앱 종료(`onDestroy`)에서는 복구한다.
 - 곡 안에서 와이퍼 입력 변환은 앱이 켠 와이퍼를 1.5초 동안 무시한다(`WiperConverter.markAppAction`).
+
+### 단계 5 (2026-11-13): 부가 기능
+
+| 항목 | 결과 |
+|---|---|
+| 충전 남은 시간 추천 | `getEvBatteryStateOfCharge`(SOC)와 `getEvChargeSwitchState`를 2초마다 읽어 홈에 표시. 남은 분 = (80% - SOC) × 0.6분(가정, 화면에 '예상' 표기), 곡 수 = 남은 시간 ÷ 곡 평균 길이. Virtual Console에서 SOC·충전 스위치를 바꾸면 문구가 바뀜: SOC 40% → "약 24분(예상), 43곡", 70% → "약 6분, 10곡", 충전 끔 → "충전 중이 아니에요", SOC 20% → "약 36분, 65곡" |
+| 튜토리얼 미션 | "와이퍼를 2단으로 올려 보세요". 앞 와이퍼 스위치를 0.5초마다 읽어 `CONTINUOUS_LEVEL_3`(Virtual Console `High`)이 되면 완료(`현재 와이퍼: 2단(고속)`, `미션 완료!`). 완료 표시는 기기에 저장되어 홈 버튼에 ✔ 표시. 입력 리스너(`WiperState`)는 켜짐/꺼짐만 줘서 단계는 스위치를 직접 읽는다 |
+| Gleo | `assets/schema.json`(함수 2개)과 `AndroidManifest.xml` intent-filter. `adb shell am start -a START_CARBEAT`: 홈에서 시작 흐름(실행 조건)으로 이동. `adb shell am start -a PAUSE_GAME`: 플레이 중이면 일시정지(곡·입력·판정 정지, 차량 반응을 원래 값으로 복구, 오버레이의 계속/종료). 재개하면 차량 반응이 다시 시작됨 |
+
+- Gleo 쪽으로 돌려주는 Callback(응답)은 구현하지 않았다(설계서 범위 밖). 시연은 adb로 같은 intent를 보낸다.
+- 주행 중(게이트 닫힘)에는 `START_CARBEAT`가 무시된다.

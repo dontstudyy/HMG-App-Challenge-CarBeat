@@ -38,6 +38,12 @@ class VehicleLink(private val ctx: Context) {
     private val reactor = com.dontstudyy.carbeat.reaction.VehicleReactor(signals) { input.wiper.markAppAction(it) }
     val reaction = com.dontstudyy.carbeat.reaction.ReactionController(reactor, settings)
 
+    /** 배터리 잔량·충전 상태(홈의 충전 추천) */
+    val energy = EnergyMonitor()
+
+    /** 앞 와이퍼 스위치의 현재 단계(튜토리얼 미션) */
+    fun readWiperSwitch(onResult: (ai.pleos.playground.vehicle.constant.control.WiperSwitch?) -> Unit) = reactor.readWiperSwitch(onResult)
+
     private val _snapshot = MutableStateFlow(VehicleSnapshot())
     val snapshot: StateFlow<VehicleSnapshot> = _snapshot.asStateFlow()
 
@@ -69,7 +75,7 @@ class VehicleLink(private val ctx: Context) {
         if (started) return
         started = true
         try {
-            vehicle = Vehicle(ctx).also { it.initialize(); input.attach(it); reactor.attach(it) }
+            vehicle = Vehicle(ctx).also { it.initialize(); input.attach(it); reactor.attach(it); energy.start(it) }
         } catch (t: Throwable) {
             Log.w(TAG, "Vehicle SDK init FAIL ${t.javaClass.simpleName}: ${t.message}")
         }
@@ -116,6 +122,7 @@ class VehicleLink(private val ctx: Context) {
         runCatching { uxManager?.unregisterListener() }
         runCatching { car?.disconnect() }
         reaction.abort() // 앱을 닫을 때 차량 값을 원래대로 되돌린다
+        energy.stop()
         input.detach()
         reactor.detach()
         runCatching { vehicle?.release() }

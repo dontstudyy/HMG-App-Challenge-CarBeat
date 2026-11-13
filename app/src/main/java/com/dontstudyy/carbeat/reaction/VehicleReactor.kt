@@ -136,6 +136,14 @@ class VehicleReactor(
         Log.i(TAG, "REACT ambient color=0x%08X brightness=${t.brightness}".format(t.argb))
     }
 
+    /** 앞 와이퍼 스위치의 현재 단계를 읽는다(튜토리얼 미션용). 못 읽으면 null */
+    fun readWiperSwitch(onResult: (WiperSwitch?) -> Unit) {
+        val v = vehicle
+        val wa = wiperArea
+        if (v == null || wa == null) { onResult(null); return }
+        v.getWiper().getCurrentWiperSwitch(wa, { s -> onResult(s) }, { onResult(null) })
+    }
+
     fun applyWiper(on: Boolean) {
         val v = vehicle ?: return
         val wa = wiperArea ?: return
