@@ -43,6 +43,8 @@ import com.dontstudyy.carbeat.game.GameResult
 import com.dontstudyy.carbeat.game.Lane
 import com.dontstudyy.carbeat.game.PlaySession
 import com.dontstudyy.carbeat.game.Song
+import com.dontstudyy.carbeat.input.CalibrationStore
+import com.dontstudyy.carbeat.input.InputHub
 import kotlinx.coroutines.delay
 
 /**
@@ -52,12 +54,14 @@ import kotlinx.coroutines.delay
 @Composable
 fun PlayScreen(
     song: Song,
+    hub: InputHub,
+    store: CalibrationStore,
     onFinish: (GameResult) -> Unit,
     onBack: () -> Unit,
     rightPanel: @Composable () -> Unit = { InteriorPlaceholder() },
 ) {
     val ctx = LocalContext.current
-    val session = remember(song) { PlaySession(ctx, song) }
+    val session = remember(song) { PlaySession(ctx, song, store::delayFor) }
     // frame, songTime은 그리기(Canvas)에서만 읽는다. 구성(composition)은 HUD 값이 바뀔 때만 다시 돈다.
     var frame by remember { mutableLongStateOf(0L) }
     var songTime by remember { mutableDoubleStateOf(-PlaySession.PRE_ROLL_SEC) }
@@ -69,7 +73,13 @@ fun PlayScreen(
 
     DisposableEffect(session) {
         session.start()
-        onDispose { session.release() }
+        // 차량 신호 입력: 스레드가 달라 메인 스레드로 넘겨서 처리한다
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        hub.listener = { e -> main.post { session.onVehicleInput(e) } }
+        onDispose {
+            hub.listener = null
+            session.release()
+        }
     }
 
     LaunchedEffect(session) {
@@ -96,22 +106,7 @@ fun PlayScreen(
             .fillMaxSize()
             .focusRequester(focus)
             .focusable()
-            .onPreviewKeyEvent { ev ->
-                // 디버그 빌드에서만 방향키를 입력으로 쓴다. release에서는 꺼짐.
-                if (!BuildConfig.DEBUG) return@onPreviewKeyEvent false
-                val lane = when (ev.key) {
-                    Key.DirectionLeft -> Lane.STEER_LEFT
-                    Key.DirectionDown -> Lane.BRAKE
-                    Key.DirectionRight -> Lane.STEER_RIGHT
-                    Key.DirectionUp -> Lane.WIPER
-                    else -> return@onPreviewKeyEvent false
-                }
-                when (ev.type) {
-                    KeyEventType.KeyDown -> if (ev.nativeKeyEvent.repeatCount == 0) session.press(lane)
-                    KeyEventType.KeyUp -> session.release(lane)
-                }
-                true
-            },
+            .debugLaneKeys(onDown = { session.press(it) }, onUp = { session.release(it) }),
     ) {
         Column(Modifier.weight(0.6f).fillMaxHeight()) {
             Hud(session.song.title, hud, progress, auto, onToggleAuto = {

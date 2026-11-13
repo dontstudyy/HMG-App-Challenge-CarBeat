@@ -76,17 +76,6 @@ fun ConditionsScreen(gate: GateState, onNext: () -> Unit, onBack: () -> Unit) {
 }
 
 @Composable
-fun CalibrationScreen(onNext: () -> Unit, onBack: () -> Unit) {
-    ScreenFrame("박자 보정") {
-        Text("메트로놈에 맞춰 브레이크 5회, 핸들 5회 (단계 3에서 구현)", fontSize = 22.sp)
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            OutlinedButton(onClick = onBack) { Text("뒤로", fontSize = 22.sp) }
-            Button(onClick = onNext) { Text("건너뛰기", fontSize = 22.sp) }
-        }
-    }
-}
-
-@Composable
 fun ResultScreen(result: GameResult?, onHome: () -> Unit) {
     ScreenFrame("결과") {
         if (result == null) {

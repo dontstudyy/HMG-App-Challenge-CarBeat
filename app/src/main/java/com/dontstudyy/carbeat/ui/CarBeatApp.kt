@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.dontstudyy.carbeat.game.GameResult
 import com.dontstudyy.carbeat.game.SongRepository
 import com.dontstudyy.carbeat.gate.GateState
+import com.dontstudyy.carbeat.input.CalibrationStore
 import com.dontstudyy.carbeat.gate.ParkingGate
 import com.dontstudyy.carbeat.vehicle.VehicleLink
 
@@ -25,12 +26,13 @@ import com.dontstudyy.carbeat.vehicle.VehicleLink
 enum class Screen { HOME, CONDITIONS, CALIBRATION, PLAY, RESULT, TUTORIAL }
 
 @Composable
-fun CarBeatApp(link: VehicleLink) {
+fun CarBeatApp(link: VehicleLink, initialSongId: String? = null) {
     val ctx = LocalContext.current
     val snapshot by link.snapshot.collectAsState()
     val gate: GateState = ParkingGate.evaluate(snapshot)
     val songs = remember { SongRepository.loadAll(ctx) }
-    var selectedId by remember { mutableStateOf("brake") }
+    val store = remember { CalibrationStore(ctx) }
+    var selectedId by remember { mutableStateOf(initialSongId?.takeIf { id -> songs.any { it.id == id } } ?: "brake") }
     var screen by remember { mutableStateOf(Screen.HOME) }
     var result by remember { mutableStateOf<GameResult?>(null) }
 
@@ -64,11 +66,15 @@ fun CarBeatApp(link: VehicleLink) {
                             onBack = { screen = Screen.HOME },
                         )
                         Screen.CALIBRATION -> CalibrationScreen(
+                            hub = link.input,
+                            store = store,
                             onNext = { screen = Screen.PLAY },
                             onBack = { screen = Screen.HOME },
                         )
                         Screen.PLAY -> PlayScreen(
                             song = songs.first { it.id == selectedId },
+                            hub = link.input,
+                            store = store,
                             onFinish = { result = it; screen = Screen.RESULT },
                             onBack = { screen = Screen.HOME },
                         )

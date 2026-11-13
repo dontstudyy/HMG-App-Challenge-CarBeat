@@ -13,7 +13,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         link = VehicleLink(applicationContext)
         link.start()
-        setContent { CarBeatApp(link) }
+        // debug 전용: adb shell am start ... --es song slow 로 곡을 미리 고른다(자동 검증용)
+        val initialSong = if (BuildConfig.DEBUG) intent?.getStringExtra("song") else null
+        setContent { CarBeatApp(link, initialSong) }
     }
 
     override fun onDestroy() {

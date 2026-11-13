@@ -27,6 +27,9 @@ class VehicleLink(private val ctx: Context) {
         private const val PROP_GEAR_SELECTION = 0x11400400
     }
 
+    /** 차량 입력(브레이크·핸들·와이퍼) 허브. start() 뒤에 Vehicle SDK에 연결된다. */
+    val input = com.dontstudyy.carbeat.input.InputHub()
+
     private val _snapshot = MutableStateFlow(VehicleSnapshot())
     val snapshot: StateFlow<VehicleSnapshot> = _snapshot.asStateFlow()
 
@@ -58,7 +61,7 @@ class VehicleLink(private val ctx: Context) {
         if (started) return
         started = true
         try {
-            vehicle = Vehicle(ctx).also { it.initialize() }
+            vehicle = Vehicle(ctx).also { it.initialize(); input.attach(it) }
         } catch (t: Throwable) {
             Log.w(TAG, "Vehicle SDK init FAIL ${t.javaClass.simpleName}: ${t.message}")
         }
@@ -104,6 +107,7 @@ class VehicleLink(private val ctx: Context) {
         runCatching { propertyManager?.unregisterCallback(gearCallback) }
         runCatching { uxManager?.unregisterListener() }
         runCatching { car?.disconnect() }
+        input.detach()
         runCatching { vehicle?.release() }
         propertyManager = null
         uxManager = null
