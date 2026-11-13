@@ -29,3 +29,7 @@ Thumbs.db
 
 # 제출용 APK는 저장소에 포함한다
 !apk/*.apk
+
+# Python 캐시 (로컬 경로가 들어가므로 올리지 않는다)
+__pycache__/
+*.pyc
