@@ -19,6 +19,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,10 +58,13 @@ fun PlayScreen(
 ) {
     val ctx = LocalContext.current
     val session = remember(song) { PlaySession(ctx, song) }
+    // frame, songTime은 그리기(Canvas)에서만 읽는다. 구성(composition)은 HUD 값이 바뀔 때만 다시 돈다.
     var frame by remember { mutableLongStateOf(0L) }
     var songTime by remember { mutableDoubleStateOf(-PlaySession.PRE_ROLL_SEC) }
+    var hud by remember { mutableStateOf(HudState()) }
+    var progress by remember { mutableFloatStateOf(0f) }
     var auto by remember { mutableStateOf(false) }
-    val textMeasurer = rememberTextMeasurer()
+    val textMeasurer = rememberTextMeasurer(cacheSize = 64)
     val focus = remember { FocusRequester() }
 
     DisposableEffect(session) {
@@ -72,8 +76,15 @@ fun PlayScreen(
         focus.requestFocus()
         while (!session.finished) {
             androidx.compose.runtime.withFrameNanos { n ->
-                songTime = session.tick()
+                val t = session.tick()
+                songTime = t
                 frame = n
+                val e = session.engine
+                val h = HudState(e.score, e.perfectCount, e.goodCount, e.missCount)
+                if (h != hud) hud = h
+                val p = (t / song.durationSec).toFloat().coerceIn(0f, 1f)
+                val pq = (p * 200).toInt() / 200f
+                if (pq != progress) progress = pq
             }
         }
         delay(900) // 마지막 연출이 보이도록
@@ -103,11 +114,12 @@ fun PlayScreen(
             },
     ) {
         Column(Modifier.weight(0.6f).fillMaxHeight()) {
-            Hud(session, songTime, frame, auto, onToggleAuto = {
+            Hud(session.song.title, hud, progress, auto, onToggleAuto = {
                 auto = !auto
                 session.autoplay = auto
             }, onBack = onBack)
             Canvas(Modifier.weight(1f).fillMaxWidth()) {
+                if (frame < 0L) return@Canvas // frame을 읽어 매 프레임 다시 그리게 한다
                 drawGame(session, songTime, System.nanoTime(), textMeasurer)
             }
         }
@@ -115,19 +127,20 @@ fun PlayScreen(
     }
 }
 
+data class HudState(val score: Int = 0, val perfect: Int = 0, val good: Int = 0, val miss: Int = 0)
+
 @Composable
 private fun Hud(
-    s: PlaySession,
-    songTime: Double,
-    @Suppress("UNUSED_PARAMETER") frame: Long, // 값이 바뀔 때마다 다시 그리려고 받는다
+    title: String,
+    h: HudState,
+    progress: Float,
     auto: Boolean,
     onToggleAuto: () -> Unit,
     onBack: () -> Unit,
 ) {
-    val e = s.engine
     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text(s.song.title, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+            Text(title, fontSize = 26.sp, fontWeight = FontWeight.Bold)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (BuildConfig.DEBUG) {
                     if (auto) Button(onClick = onToggleAuto) { Text("오토 ON") } else OutlinedButton(onClick = onToggleAuto) { Text("오토") }
@@ -135,16 +148,13 @@ private fun Hud(
                 OutlinedButton(onClick = onBack) { Text("중단") }
             }
         }
-        LinearProgressIndicator(
-            progress = { (songTime / s.song.durationSec).toFloat().coerceIn(0f, 1f) },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
-            Text("%,d".format(e.score), fontSize = 40.sp, fontWeight = FontWeight.ExtraBold)
+            Text("%,d".format(h.score), fontSize = 40.sp, fontWeight = FontWeight.ExtraBold)
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                Text("PERFECT ${e.perfectCount}", fontSize = 18.sp)
-                Text("GOOD ${e.goodCount}", fontSize = 18.sp)
-                Text("MISS ${e.missCount}", fontSize = 18.sp)
+                Text("PERFECT ${h.perfect}", fontSize = 18.sp)
+                Text("GOOD ${h.good}", fontSize = 18.sp)
+                Text("MISS ${h.miss}", fontSize = 18.sp)
             }
         }
     }

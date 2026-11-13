@@ -71,9 +71,21 @@ class PlaySession(
         return if (player.isPlaying || player.ended) player.positionSec else 0.0
     }
 
+    private var diagFrames = 0
+    private var diagLastNanos = 0L
+
     /** 프레임마다 호출. 곡 시각을 돌려준다. */
     fun tick(): Double {
         val t = songTimeSec()
+        // 진단: 1초마다 곡 시각과 프레임 수(초당 프레임)를 남긴다
+        diagFrames++
+        val now = System.nanoTime()
+        if (diagLastNanos == 0L) diagLastNanos = now
+        if (now - diagLastNanos >= 1_000_000_000L) {
+            android.util.Log.i("CARBEAT", "PLAY songT=${"%.2f".format(t)} wall=${(now - startNanos) / 1_000_000 / 1000.0}s fps=$diagFrames")
+            diagFrames = 0
+            diagLastNanos = now
+        }
         if (autoplay) autoStep(t)
         engine.update(t)
         if (!finished && (player.ended || t >= song.durationSec + END_GRACE_SEC)) {
